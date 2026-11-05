@@ -1,0 +1,258 @@
+/*
+ * Design tokens from Figma ("פורטל / פס מבזקים").
+ * Each one can be overridden by the host app by setting the variable on an ancestor.
+ */
+.root {
+  --nt-surface: var(--surface-surface, #ffffff);
+  --nt-border: var(--border-border-default, #e2e8f0);
+  --nt-text-primary: var(--text-text-icon-primary, #00033d);
+  --nt-text-secondary: var(--text-text-secondary, #4a5568);
+  --nt-brand: var(--background-brand-default, #0068f5);
+  --nt-brand-subtle: var(--background-brand-subtle, #ebf3ff);
+  --nt-tag-bg: var(--brand-brand-tint-75, #e0edfb);
+  --nt-tag-text: var(--primary-dark, #00033d);
+  --nt-space-200: var(--space-200, 4px);
+  --nt-space-300: var(--space-300, 8px);
+  --nt-space-500: var(--space-500, 16px);
+  --nt-radius-m: var(--radius-m, 8px);
+  --nt-radius-l: var(--radius-l, 12px);
+  --nt-radius-full: var(--radius-full, 100px);
+  --nt-height: var(--layout-flash-bar-height, 56px);
+  --nt-fade-width: 120px;
+
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--nt-space-500);
+  width: 100%;
+  height: var(--nt-height);
+  /* RTL: inline-start = right (8px), inline-end = left (16px) */
+  padding-inline-start: var(--nt-space-300);
+  padding-inline-end: var(--nt-space-500);
+  background: var(--nt-surface);
+  border: 1px solid var(--nt-border);
+  border-radius: var(--nt-radius-l);
+  overflow: hidden;
+  direction: rtl;
+  font-family: 'Rubik', system-ui, sans-serif;
+}
+
+.root *,
+.root *::before,
+.root *::after {
+  box-sizing: border-box;
+}
+
+/* ---------- Tag "מבזקים" ---------- */
+.tag {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--nt-space-300);
+  padding: var(--nt-space-200) var(--nt-space-300);
+  background: var(--nt-tag-bg);
+  border-radius: var(--nt-radius-m);
+}
+
+.tagLabel {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--nt-tag-text);
+  white-space: nowrap;
+}
+
+.liveDot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  transition: opacity 200ms ease;
+}
+
+/* Paused state: dimmed live dot (per design spec) */
+.paused .liveDot {
+  opacity: 0.35;
+}
+
+/* ---------- Pause / Play button ---------- */
+.toggle {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nt-radius-full);
+  background: var(--nt-brand-subtle);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--nt-brand);
+  outline-offset: 2px;
+}
+
+.icon {
+  position: relative;
+  display: block;
+  width: 12px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.bar {
+  position: absolute;
+  top: 0;
+  width: 4px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--nt-brand);
+}
+
+.bar:first-child {
+  left: 1px;
+}
+
+.bar:last-child {
+  left: 7px;
+}
+
+.playIcon {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+/* ---------- Scrolling list ---------- */
+.viewport {
+  position: relative;
+  flex: 1 0 0;
+  min-width: 1px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.track {
+  display: flex;
+  flex-shrink: 0;
+  width: max-content;
+  animation: nt-scroll var(--nt-duration, 40s) linear infinite;
+  will-change: transform;
+}
+
+.paused .track,
+.viewport:hover .track,
+.viewport:focus-within .track {
+  animation-play-state: paused;
+}
+
+.copy {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--nt-space-500);
+  /* trailing gap so that the two copies repeat seamlessly */
+  padding-inline-end: var(--nt-space-500);
+  margin: 0;
+  padding-block: 0;
+  padding-inline-start: 0;
+  list-style: none;
+}
+
+/* RTL ticker: content moves from left to right */
+@keyframes nt-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(50%);
+  }
+}
+
+/* ---------- News item ---------- */
+.item {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+.link:hover .title {
+  text-decoration: underline;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--nt-brand);
+  outline-offset: 2px;
+}
+
+.meta {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: var(--nt-text-secondary);
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--nt-text-primary);
+}
+
+.separator {
+  display: block;
+  width: 12px;
+  height: 4px;
+  flex-shrink: 0;
+}
+
+/* ---------- Left fade ---------- */
+.fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--nt-fade-width);
+  background: linear-gradient(to right, var(--nt-surface) 15%, rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.empty {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--nt-text-secondary);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
