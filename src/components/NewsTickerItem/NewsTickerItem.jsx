@@ -1,6 +1,6 @@
 import React from 'react';
 import separatorIcon from '../../assets/separator.svg';
-import styles from './NewsTicker.module.css';
+import styles from '../NewsTicker/NewsTicker.module.css';
 
 const timeFormatter = new Intl.DateTimeFormat('he-IL', {
   hour: '2-digit',
@@ -18,17 +18,9 @@ function formatTime(value) {
   return date ? timeFormatter.format(date) : String(value);
 }
 
-/**
- * One news item: "source · time", then the headline, then a dot separator.
- * @param {object}  props
- * @param {object}  props.item          { id, title, source, publishedAt, url? }
- * @param {boolean} props.showSeparator turned off for the last item
- * @param {boolean} props.focusable     items in the duplicated copy are not focusable
- */
 export function NewsTickerItem({ item, showSeparator, focusable }) {
   const content = (
     <>
-      {/* RTL order: source · time, then the headline */}
       <p className={styles.meta}>
         {item.source} · <time dateTime={toDate(item.publishedAt)?.toISOString()}>{formatTime(item.publishedAt)}</time>
       </p>

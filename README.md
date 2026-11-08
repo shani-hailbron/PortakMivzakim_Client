@@ -1,56 +1,69 @@
-# פס מבזקים – מיקרו־פרונט (React + Webpack 5 Module Federation)
+# Portal Mivzakim Client – React 17 + Webpack 5 Module Federation
 
-מימוש של הקומפוננטה "פס מבזקים" מפיגמה (node `976:993`), ב-React JavaScript.
+מיקרו־פרונט עם שני רכיבים נפרדים: פס מבזקים קומפקטי ומסך “כל המבזקים”. מסך החדשות כולל את אזור התוכן בלבד, ללא Header או Sidebar של הפורטל.
 
 ## הרצה
 
 ```bash
 npm install
-npm start              # פיתוח: http://localhost:5001
-npm run build          # בנייה לתיקיית dist
-npm run serve:remote   # הגשת גרסת production על פורט 5001
+npm start              # פיתוח: http://localhost:8890
+npm run build          # בנייה לסביבת prod לתיקיית build
+npm run build:dev
+npm run build:test
+npm run build:lrn
+npm run serve:remote
 ```
 
-ה-remote זמין בכתובת: `http://localhost:5001/remoteEntry.js`
+ה־remote זמין בכתובת `http://localhost:8890/remoteEntry.js`. בשרת הפיתוח `/` ו־`/ticker` מציגים את מסך כל המבזקים; `/ticker-bar` מציג את הפס הקומפקטי. לחיצה על הפס מעבירה אל `/ticker`.
 
 ## מבנה
 
 ```
 src/
-  index.js                     ← נקודת כניסה (async boundary ל-Module Federation)
-  bootstrap.jsx                ← עמוד פיתוח עצמאי בלבד
-  components/NewsTicker/
-    NewsTicker.jsx             ← הקומפוננטה (מקבלת items)
-    NewsTickerItem.jsx         ← פריט בודד
-    NewsTickerContainer.jsx    ← גרסה שטוענת את הנתונים בעצמה
-    NewsTicker.module.css      ← עיצוב + משתני העיצוב מפיגמה
-    fonts.js                   ← גופן Rubik
-    index.js                   ← מה שנחשף ל-host
-  hooks/useNewsFeed.js         ← טעינה + רענון תקופתי
-  services/newsApi.js          ← ← כאן מחברים את ה-API האמיתי
-  mocks/news.mock.js           ← נתוני דמה מהעיצוב
-  assets/                      ← אייקונים
+  index.js
+  App.jsx
+  bootstrap.js
+  index.css
+  index.html
+  components/
+    AllNews/                    ← מסך כל המבזקים
+    NewsTicker/                 ← פס המבזקים
+    NewsTickerContainer/        ← טעינת נתונים עבור הפס
+    NewsTickerItem/             ← פריט בפס
+  hooks/useNewsFeed.js
+  services/newsApi.js
+  mocks/news.mock.js
+  assets/
 webpack.config.js
-babel.config.json
+.babelrc
+env.config.js
 ```
 
-## חיבור ל-DATA האמיתי
+## חיבור לנתוני הפורטל
 
 יש שתי אפשרויות:
 
-1. **ה-host מעביר את הנתונים** (מומלץ אם ה-host כבר מושך אותם):
+1. **ה־host מעביר את הנתונים**:
    ```jsx
-   import NewsTicker from 'newsTicker/NewsTicker';
+  import NewsTicker from 'PortalMivzakim_Client/NewsTicker';
    <NewsTicker items={newsFromServer} />
    ```
-2. **המיקרו־פרונט טוען בעצמו**: מעתיקים את `.env.example` ל-`.env`, ממלאים את `NEWS_API_URL`,
-   ומתאימים את שמות השדות בפונקציה `mapApiItem` שבקובץ `src/services/newsApi.js`. אחר כך משתמשים ב-
+2. **המיקרו־פרונט טוען בעצמו**:
    ```jsx
-   import NewsTickerContainer from 'newsTicker/NewsTickerContainer';
+  import NewsTickerContainer from 'PortalMivzakim_Client/NewsTickerContainer';
    <NewsTickerContainer refreshMs={60000} />
    ```
 
-כל עוד ה-API לא מוגדר, מוצגים נתוני הדמה מהעיצוב (`src/mocks/news.mock.js`).
+מסך כל החדשות נצרך בנפרד:
+
+```jsx
+import AllNewsPage from 'PortalMivzakim_Client/AllNewsPage';
+<AllNewsPage />
+```
+
+ה־remote חושף `./NewsTicker`, `./NewsTickerContainer` ו־`./AllNewsPage`. השם ב־Webpack הוא `PortalMivzakim_Client`, ולכן כך יש להגדיר אותו ב־`remotes` של כל host.
+
+הגדרות הסביבות נמצאות ב־`env.config.js`. כתובת ריקה תחת `SERVICES.MIVZAKIM.URL` מציגה mock; שירות אמיתי מוגדר באמצעות `MIVZAKIM_API_URL` בזמן build. הקריאה משתמשת ב־`Mivzakim/GetList` וב־`credentials: 'include'`.
 
 מבנה פריט:
 
@@ -72,11 +85,11 @@ const { ModuleFederationPlugin } = require('webpack').container;
 new ModuleFederationPlugin({
   name: 'host',
   remotes: {
-    newsTicker: 'newsTicker@http://localhost:5001/remoteEntry.js',
+    PortalMivzakim_Client: 'PortalMivzakim_Client@http://localhost:8890/remoteEntry.js',
   },
   shared: {
-    react: { singleton: true },
-    'react-dom': { singleton: true },
+    react: { singleton: true, requiredVersion: '17.0.2' },
+    'react-dom': { singleton: true, requiredVersion: '17.0.2' },
   },
 });
 ```

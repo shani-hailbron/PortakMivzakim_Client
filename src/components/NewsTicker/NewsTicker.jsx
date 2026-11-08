@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import liveDotIcon from '../../assets/live-dot.svg';
-import { NewsTickerItem } from './NewsTickerItem';
+import { NewsTickerItem } from '../NewsTickerItem/NewsTickerItem';
 import styles from './NewsTicker.module.css';
 
 function prefersReducedMotion() {
@@ -21,7 +21,15 @@ function prefersReducedMotion() {
  * @param {string}  [props.emptyText] shown while items is empty (loading / no news)
  * @param {string}  [props.className]
  */
-export function NewsTicker({ items = [], label = 'מבזקים', speed = 50, emptyText = '', className }) {
+export function NewsTicker({
+  items = [],
+  label = 'מבזקים',
+  speed = 50,
+  emptyText = '',
+  className,
+  allNewsUrl = '/ticker',
+  onOpenAllNews,
+}) {
   const [paused, setPaused] = useState(prefersReducedMotion);
   const [repeat, setRepeat] = useState(1);
   const [duration, setDuration] = useState(40);
@@ -64,6 +72,27 @@ export function NewsTicker({ items = [], label = 'מבזקים', speed = 50, emp
 
   const sequence = Array.from({ length: repeat }, () => items).flat();
 
+  const navigateToAllNews = () => {
+    if (onOpenAllNews) {
+      onOpenAllNews();
+      return;
+    }
+    window.location.assign(allNewsUrl);
+  };
+
+  const handleTickerClick = (event) => {
+    if (event.target.closest('button')) return;
+    if (event.target.closest('a')) event.preventDefault();
+    navigateToAllNews();
+  };
+
+  const handleLabelClick = (event) => {
+    event.stopPropagation();
+    if (!onOpenAllNews) return;
+    event.preventDefault();
+    onOpenAllNews();
+  };
+
   const renderCopy = (copyIndex) => (
     <ul
       key={copyIndex}
@@ -86,9 +115,11 @@ export function NewsTicker({ items = [], label = 'מבזקים', speed = 50, emp
   const rootClass = [styles.root, paused ? styles.paused : '', className || ''].filter(Boolean).join(' ');
 
   return (
-    <section className={rootClass} aria-label={label} dir="rtl">
+    <section className={rootClass} aria-label={label} dir="rtl" onClick={handleTickerClick}>
       <div className={styles.tag}>
-        <p className={styles.tagLabel}>{label}</p>
+        <a className={styles.tagLink} href={allNewsUrl} onClick={handleLabelClick}>
+          {label}
+        </a>
         <img className={styles.liveDot} src={liveDotIcon} width={6} height={6} alt="" />
       </div>
 

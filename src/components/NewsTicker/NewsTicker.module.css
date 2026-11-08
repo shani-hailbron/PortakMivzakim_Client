@@ -36,6 +36,7 @@
   overflow: hidden;
   direction: rtl;
   font-family: 'Rubik', system-ui, sans-serif;
+  cursor: pointer;
 }
 
 .root *,
@@ -62,6 +63,11 @@
   line-height: 1;
   color: var(--nt-tag-text);
   white-space: nowrap;
+}
+
+.tagLink {
+  color: inherit;
+  text-decoration: none;
 }
 
 .liveDot {

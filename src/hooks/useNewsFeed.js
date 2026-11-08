@@ -5,7 +5,7 @@ import { fetchNews } from '../services/newsApi';
  * Loads the news list and refreshes it periodically.
  * @param {number} refreshMs polling interval (default 60s). Pass 0 to disable.
  */
-export function useNewsFeed(refreshMs = 60000) {
+export function useNewsFeed(refreshMs = 60000, autoRefresh = true) {
   const [state, setState] = useState({ items: [], loading: true, error: null });
 
   useEffect(() => {
@@ -24,12 +24,12 @@ export function useNewsFeed(refreshMs = 60000) {
     };
 
     load();
-    const timer = refreshMs > 0 ? window.setInterval(load, refreshMs) : undefined;
+    const timer = autoRefresh && refreshMs > 0 ? window.setInterval(load, refreshMs) : undefined;
     return () => {
       controller.abort();
       if (timer) window.clearInterval(timer);
     };
-  }, [refreshMs]);
+  }, [refreshMs, autoRefresh]);
 
   return state;
 }

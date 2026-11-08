@@ -1,19 +1,13 @@
-/**
- * Placeholder data taken from the Figma design.
- * Used only when no real API is configured (see services/newsApi.js).
- *
- * Item shape:
- * {
- *   id: string,                 // unique id
- *   title: string,              // headline
- *   source: string,             // source / outlet
- *   publishedAt: string | Date, // displayed as HH:mm
- *   url?: string                // optional – item becomes a link
- * }
- */
+// Representative Figma data; three updates stay queued until the user accepts them.
 export const mockNews = [
-  { id: '1', title: 'בנק ישראל הותיר את הריבית ללא שינוי', source: 'ynet', publishedAt: '2026-11-04T10:42:00' },
-  { id: '2', title: 'צפי לגשמים ברוב אזורי הארץ בסוף השבוע', source: 'כאן חדשות', publishedAt: '2026-11-04T10:15:00' },
-  { id: '3', title: 'משרד התחבורה: שינויים בקווי הרכבת החל מיום ראשון', source: 'וואלה', publishedAt: '2026-11-04T09:58:00' },
-  { id: '4', title: 'נפתח מועד ההגשה למלגות הסטודנטים לשנה הבאה', source: 'מעריב', publishedAt: '2026-11-04T09:30:00' },
+  { id: 'news-1042', title: 'התרעה: הנחיות פיקוד העורף עודכנו לאזור המרכז', details: 'ההנחיות בתוקף עד יום רביעי בשעה 18:00. אין שינוי בהנחיות לשאר האזורים.', source: 'ערוץ 14', publishedAt: '2026-11-02T10:42:00', relativeTime: 'לפני 3 דק׳', priority: 'urgent', dayLabel: 'היום · יום שני 2.11' },
+  { id: 'news-1031', title: 'בנק ישראל הותיר את הריבית ללא שינוי', details: 'הוועדה המוניטרית החליטה פה אחד. ההחלטה הבאה תפורסם בעוד שישה שבועות.', source: 'כאן חדשות', publishedAt: '2026-11-02T10:31:00', relativeTime: 'לפני 14 דק׳', dayLabel: 'היום · יום שני 2.11' },
+  { id: 'news-1018', title: 'משרד התחבורה: שינויים בקווי הרכבת החל מיום ראשון', details: 'שלושה קווים יפעלו בתדירות מופחתת בגלל עבודות תשתית בתחנת סבידור.', source: 'ynet', publishedAt: '2026-11-02T10:18:00', relativeTime: 'לפני 27 דק׳', dayLabel: 'היום · יום שני 2.11' },
+  { id: 'news-0958', title: 'נפתח מועד ההגשה למלגות סטודנטים לשנת הלימודים הבאה', details: 'ההגשה באתר המשרד עד סוף החודש.', source: 'וואלה', publishedAt: '2026-11-02T09:58:00', relativeTime: 'לפני 47 דק׳', dayLabel: 'היום · יום שני 2.11' },
+  { id: 'news-0915', title: 'כביש 6 נחסם לתנועה בין מחלפים עירון ומשמר השבעה', details: 'המשטרה מנתבת את התנועה לכביש 4. צפי לפתיחה בשעות הצהריים.', source: 'כאן חדשות', publishedAt: '2026-11-02T09:15:00', relativeTime: 'לפני שעה וחצי', priority: 'urgent', dayLabel: 'היום · יום שני 2.11' },
+  { id: 'news-0840', title: 'הכנסת אישרה בקריאה ראשונה את תקציב המדינה', details: 'ההצבעה הבאה צפויה בשבוע הבא.', source: 'מעריב', publishedAt: '2026-11-02T08:40:00', relativeTime: 'לפני שעתיים', dayLabel: 'היום · יום שני 2.11' },
+  { id: 'news-yesterday', title: 'צפי לגשמים ברוב אזורי הארץ בסוף השבוע', details: 'השירות המטאורולוגי פרסם תחזית מעודכנת לסוף השבוע.', source: 'N12', publishedAt: '2026-11-01T18:20:00', relativeTime: 'אתמול', dayLabel: 'אתמול · יום ראשון 1.11' },
+  { id: 'news-new-1', title: 'עדכון: ההנחיות באזור המרכז נותרו ללא שינוי', details: 'פיקוד העורף ימשיך לעדכן בהתאם להתפתחויות.', source: 'ערוץ 14', publishedAt: '2026-11-02T10:55:00', relativeTime: 'עכשיו', priority: 'urgent', dayLabel: 'היום · יום שני 2.11', isNew: true },
+  { id: 'news-new-2', title: 'נרשמו עומסי תנועה בכביש החוף לכיוון צפון', details: 'מומלץ לנהגים לבחור בדרכים חלופיות.', source: 'N12', publishedAt: '2026-11-02T10:53:00', relativeTime: 'לפני 2 דק׳', dayLabel: 'היום · יום שני 2.11', isNew: true },
+  { id: 'news-new-3', title: 'משרד החינוך פרסם עדכון להורים לקראת החזרה ללימודים', details: 'העדכון המלא זמין באתר משרד החינוך.', source: 'ynet', publishedAt: '2026-11-02T10:51:00', relativeTime: 'לפני 4 דק׳', dayLabel: 'היום · יום שני 2.11', isNew: true },
 ];

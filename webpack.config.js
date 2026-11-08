@@ -1,19 +1,23 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const Dotenv = require('dotenv-webpack');
 const { ModuleFederationPlugin } = require('webpack').container;
+const { EnvironmentPlugin } = require('webpack');
 const deps = require('./package.json').dependencies;
+const { getEnvVariables } = require('./env.config');
 
 /**
  * Micro-frontend (remote): "newsTicker"
  *
  * The host app consumes it with:
- *   remotes: { newsTicker: 'newsTicker@http://localhost:5001/remoteEntry.js' }
+ *   remotes: { PortalMivzakim_Client: 'PortalMivzakim_Client@http://localhost:8890/remoteEntry.js' }
  * and imports:
- *   import NewsTicker from 'newsTicker/NewsTicker';
+ *   import NewsTicker from 'PortalMivzakim_Client/NewsTicker';
  */
-module.exports = (env, argv) => {
-  const isProd = argv.mode === 'production';
+module.exports = (env = {}, argv = {}) => {
+  const environment = env.sviva || 'local';
+  const isProd = argv.mode === 'production' || environment !== 'local';
+  const outputPath = environment === 'local' ? 'dist' : 'build';
+  const environmentVariables = getEnvVariables(environment);
 
   return {
     entry: './src/index.js',
@@ -21,8 +25,8 @@ module.exports = (env, argv) => {
     devtool: isProd ? 'source-map' : 'eval-cheap-module-source-map',
 
     output: {
-      path: path.resolve(__dirname, 'dist'),
-      publicPath: 'auto',
+      path: path.resolve(__dirname, outputPath),
+      publicPath: environment === 'local' ? 'http://localhost:8890/' : 'auto',
       filename: isProd ? '[name].[contenthash:8].js' : '[name].js',
       assetModuleFilename: 'assets/[name].[contenthash:8][ext]',
       clean: true,
@@ -49,7 +53,7 @@ module.exports = (env, argv) => {
               options: {
                 modules: {
                   namedExport: false,
-                  exportLocalsConvention: 'as-is',
+                  exportLocalsConvention: 'asIs',
                   localIdentName: isProd ? 'nt_[hash:base64:6]' : 'nt_[local]_[hash:base64:4]',
                 },
               },
@@ -76,29 +80,35 @@ module.exports = (env, argv) => {
 
     plugins: [
       new ModuleFederationPlugin({
-        name: 'newsTicker',
+        name: 'PortalMivzakim_Client',
         filename: 'remoteEntry.js',
         exposes: {
-          './NewsTicker': './src/components/NewsTicker/index.js',
-          './NewsTickerContainer': './src/components/NewsTicker/NewsTickerContainer.jsx',
+          './NewsTicker': './src/components/NewsTicker/NewsTicker.jsx',
+          './NewsTickerContainer': './src/components/NewsTickerContainer/NewsTickerContainer.jsx',
+          './AllNewsPage': './src/components/AllNews/AllNewsPage.jsx',
         },
         shared: {
           react: { singleton: true, requiredVersion: deps.react },
           'react-dom': { singleton: true, requiredVersion: deps['react-dom'] },
         },
       }),
-      // Reads .env → process.env.NEWS_API_URL (see .env.example)
-      new Dotenv({ systemvars: true, silent: true, defaults: false }),
+      new EnvironmentPlugin(environmentVariables),
       new HtmlWebpackPlugin({
-        template: './public/index.html',
+        template: './src/index.html',
       }),
     ],
 
     devServer: {
-      port: 5001,
+      port: 8890,
       historyApiFallback: true,
       hot: true,
       headers: { 'Access-Control-Allow-Origin': '*' },
+      proxy: {
+        '/api': {
+          target: 'http://localhost:29165',
+          changeOrigin: true,
+        },
+      },
     },
 
     performance: { hints: false },
