@@ -1,5 +1,5 @@
 import React from 'react';
-import separatorIcon from '../../assets/separator.svg';
+import { SeparatorIcon } from '../../assets';
 import styles from '../NewsTicker/NewsTicker.module.css';
 
 const timeFormatter = new Intl.DateTimeFormat('he-IL', {
@@ -43,7 +43,7 @@ export function NewsTickerItem({ item, showSeparator, focusable }) {
       ) : (
         content
       )}
-      {showSeparator && <img className={styles.separator} src={separatorIcon} width={12} height={4} alt="" />}
+      {showSeparator && <SeparatorIcon className={styles.separator} width={12} height={4} aria-hidden="true" />}
     </li>
   );
 }

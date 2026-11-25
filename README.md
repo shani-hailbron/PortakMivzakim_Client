@@ -30,9 +30,8 @@ src/
     NewsTicker/                 ← פס המבזקים
     NewsTickerContainer/        ← טעינת נתונים עבור הפס
     NewsTickerItem/             ← פריט בפס
-  hooks/useNewsFeed.js
+  context/NewsFeedContext.jsx   ← מקור הנתונים המשותף (משיכה מהערוצים כל 30 שניות)
   services/newsApi.js
-  mocks/news.mock.js
   assets/
 webpack.config.js
 .babelrc
@@ -48,22 +47,56 @@ env.config.js
   import NewsTicker from 'PortalMivzakim_Client/NewsTicker';
    <NewsTicker items={newsFromServer} />
    ```
-2. **המיקרו־פרונט טוען בעצמו**:
+2. **המיקרו־פרונט טוען בעצמו (מומלץ)** – עוטפים את הפורטל ב־`NewsFeedProvider`, וכל הרכיבים חולקים מקור נתונים אחד: הערוצים נשאלים פעם אחת כל 30 שניות, ולא כל רכיב בנפרד.
    ```jsx
-  import NewsTickerContainer from 'PortalMivzakim_Client/NewsTickerContainer';
-   <NewsTickerContainer refreshMs={60000} />
+   import NewsFeedProvider from 'PortalMivzakim_Client/NewsFeedProvider';
+   import NewsTickerContainer from 'PortalMivzakim_Client/NewsTickerContainer';
+   import AllNewsPage from 'PortalMivzakim_Client/AllNewsPage';
+
+   <NewsFeedProvider>            {/* refreshMs={30000} כברירת מחדל */}
+     <Portal>
+       <NewsTickerContainer />   {/* בפס */}
+       <AllNewsPage />           {/* בעמוד המבזקים */}
+     </Portal>
+   </NewsFeedProvider>
    ```
+   בלי `NewsFeedProvider` הרכיבים עדיין עובדים: כל אחד יוצר לעצמו מקור נתונים (ואז `refreshMs` שלו קובע את התדירות), אבל כל אחד שולח בקשות משלו.
 
-מסך כל החדשות נצרך בנפרד:
+   בתוך המיקרו־פרונט הנתונים נגישים לכל רכיב עם `useNewsFeed()` מ־`src/context/NewsFeedContext.jsx`:
+   `{ items, loading, error, updatedAt, reload, refreshMs }`.
 
-```jsx
-import AllNewsPage from 'PortalMivzakim_Client/AllNewsPage';
-<AllNewsPage />
-```
+ה־remote חושף `./NewsTicker`, `./NewsTickerContainer`, `./AllNewsPage` ו־`./NewsFeedProvider`. השם ב־Webpack הוא `PortalMivzakim_Client`, ולכן כך יש להגדיר אותו ב־`remotes` של כל host.
 
-ה־remote חושף `./NewsTicker`, `./NewsTickerContainer` ו־`./AllNewsPage`. השם ב־Webpack הוא `PortalMivzakim_Client`, ולכן כך יש להגדיר אותו ב־`remotes` של כל host.
+הגדרות הסביבות נמצאות ב־`env.config.js`. מקור המבזקים:
 
-הגדרות הסביבות נמצאות ב־`env.config.js`. כתובת ריקה תחת `SERVICES.MIVZAKIM.URL` מציגה mock; שירות אמיתי מוגדר באמצעות `MIVZAKIM_API_URL` בזמן build. הקריאה משתמשת ב־`Mivzakim/GetList` וב־`credentials: 'include'`.
+- `MIVZAKIM_API_URL` בזמן build – שירות המבזקים הפנימי (`Mivzakim/GetList`, עם `credentials: 'include'`).
+- אחרת – ישירות מהערוצים (`SERVICES.MIVZAKIM.NEWS_SOURCES`). ערוץ שנכשל מדולג, והשאר ממשיכים להופיע.
+
+| מקור | מאיפה | הערה |
+|---|---|---|
+| חדשות 12 | "צ'אט הכתבים" – מסד ה־Firebase שהאתר של N12 קורא ממנו (`channel-2-news`) | לא פיד רשמי לשימוש חיצוני; עלול להשתנות או להיסגר. לא צריך הפניה בשרת. |
+| ערוץ 14 | 30 הכתבות האחרונות מממשק ה־WordPress הרשמי (`c14.co.il/wp-json/wp/v2/posts`), מכל הקטגוריות | אין לערוץ 14 פיד מבזקים. לא צריך הפניה בשרת. |
+| וויינט | RSS מבזקים | |
+| וויינט ספורט | RSS מדור הספורט | |
+| הארץ | RSS "הכתבות האחרונות" | אין להארץ פיד מבזקים |
+| ישראל היום | RSS כללי, מסונן למדור החדשות (`/news/`) | אין לישראל היום פיד מבזקים |
+
+### הפניות RSS בשרת (חובה בסביבות dev / test / lrn / prod)
+
+הערוצים לא מתירים קריאה ישירה מהדפדפן (אין להם CORS, ו־ynet אף מחזירים 403 כשיש כותרת `Origin`).
+לכן האפליקציה פונה לנתיבים בשרת שלנו, והשרת צריך להעביר אותם לערוץ. בפיתוח מקומי שרת ה־webpack עושה זאת בעצמו (`devServer.proxy` ב־`webpack.config.js`). בשאר הסביבות צריך להגדיר את ההפניות האלה בשרת שמארח את האפליקציה:
+
+| נתיב בשרת שלנו | כתובת היעד |
+|---|---|
+| `/rss/ynet-news` | `https://www.ynet.co.il/Integration/StoryRss1854.xml` |
+| `/rss/ynet-sport` | `https://www.ynet.co.il/Integration/StoryRss3.xml` |
+| `/rss/haaretz` | `https://www.haaretz.co.il/srv/rss---feedly` |
+| `/rss/israelhayom` | `https://www.israelhayom.co.il/rss.xml` |
+
+הפורטל רץ על IIS: קובץ הגדרות מוכן, כולל דרישות מוקדמות ופקודות התקנה, נמצא ב־[deploy/iis/web.config](deploy/iis/web.config).
+
+בהפניה יש להסיר מהבקשה את הכותרות `Origin`, `Referer` ו־`Cookie`. אחרת ynet מחזירים 403, ועוגיות הפורטל נשלחות לאתר חיצוני.
+אפשר גם להחליף כל כתובת בזמן build דרך משתני הסביבה `N12_DESK_URL`, `CHANNEL_14_URL`, `YNET_RSS_URL`, `YNET_SPORT_RSS_URL`, `HAARETZ_RSS_URL` ו־`ISRAEL_HAYOM_RSS_URL`.
 
 מבנה פריט:
 

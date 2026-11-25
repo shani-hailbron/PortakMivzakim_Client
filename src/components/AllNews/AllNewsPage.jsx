@@ -1,17 +1,32 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNewsFeed } from '../../hooks/useNewsFeed';
-import backIcon from '../../assets/all-news-back.svg';
-import searchIcon from '../../assets/all-news-search.svg';
-import sectionIcon from '../../assets/all-news-section.svg';
-import arrowUpIcon from '../../assets/all-news-arrow-up.svg';
-import dotIcon from '../../assets/all-news-dot.svg';
-import urgentDotIcon from '../../assets/all-news-urgent-dot.svg';
-import toggleIcon from '../../assets/all-news-toggle.svg';
-import playIcon from '../../assets/all-news-play.svg';
-import liveIcon from '../../assets/all-news-live.svg';
+import { EnsureNewsFeed, useNewsFeed } from '../../context/NewsFeedContext';
+import { useReadStatus } from '../../hooks/useReadStatus';
+import {
+  AllNewsSearchIcon,
+  AllNewsArrowUpIcon,
+  AllNewsDotIcon,
+  AllNewsMarkerIcon,
+  AllNewsAllSourcesIcon,
+  AllNewsEmptyStateIcon,
+  AllNewsNoFlashesIcon,
+  AllNewsOfflineIcon,
+  AllNewsToggleIcon,
+  AllNewsPlayIcon,
+  AllNewsLiveIcon,
+} from '../../assets';
+import { ChannelIcon } from '../ChannelIcon/ChannelIcon';
 import styles from './AllNews.module.css';
 
-const sourceFilters = ['N12', 'מעריב', 'וואלה', 'ynet', 'כאן חדשות', 'ערוץ 14'];
+const sourceFilters = ['וויינט ספורט', 'ישראל היום', 'חדשות 12', 'ערוץ 14', 'וויינט', 'הארץ'];
+
+const sourcePrepositions = {
+  'וויינט ספורט': 'מוויינט ספורט',
+  'ישראל היום': 'מישראל היום',
+  'חדשות 12': 'מחדשות 12',
+  'ערוץ 14': 'מערוץ 14',
+  'וויינט': 'מוויינט',
+  'הארץ': 'מהארץ',
+};
 
 function itemTime(item) {
   const date = new Date(item.publishedAt);
@@ -21,10 +36,6 @@ function itemTime(item) {
 
 function sortNewestFirst(items) {
   return [...items].sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-}
-
-function isUrgent(item) {
-  return item.priority === 'urgent' || item.priority === 'Urgent' || item.isUrgent === true;
 }
 
 function isToday(item) {
@@ -38,61 +49,98 @@ function isToday(item) {
     publishedAt.getDate() === now.getDate();
 }
 
-function NewsItem({ item, selected, onSelect }) {
-  const urgent = isUrgent(item);
-
+function NewsItem({ item, selected, isUnread, showSource = true, onSelect }) {
   return (
     <button
       type="button"
-      className={`${styles.flash} ${urgent ? styles.urgent : ''} ${selected ? styles.selected : ''}`}
+      className={`${styles.flash} ${selected ? styles.selected : ''}`}
       onClick={onSelect}
       aria-pressed={selected}
     >
-      <time className={`${styles.time} ${urgent ? styles.urgentTime : ''}`} dateTime={item.publishedAt}>
-        {itemTime(item)}
-        <span>{item.relativeTime || ''}</span>
-      </time>
-      <span className={styles.rail} aria-hidden="true">
-        <img src={urgent ? urgentDotIcon : dotIcon} width="10" height="10" alt="" />
-      </span>
       <span className={styles.flashBody}>
-        <span className={styles.meta}>
-          {urgent && <span className={styles.urgentBadge}>מבזק דחוף</span>}
-          <span className={styles.source}>{item.source}</span>
-        </span>
+        {showSource && (
+          <span className={styles.meta}>
+            <ChannelIcon name={item.source} className={styles.sourceLogo} />
+            <span className={styles.source}>{item.source}</span>
+          </span>
+        )}
         <span className={styles.headline}>{item.title}</span>
         {item.details && <span className={styles.details}>{item.details}</span>}
       </span>
+      <span className={styles.rail} aria-hidden="true">
+        <AllNewsMarkerIcon className={styles.marker} aria-hidden="true" />
+        {isUnread && <AllNewsDotIcon className={styles.newDot} aria-hidden="true" />}
+        {isUnread && <span className={styles.visuallyHidden}>לא נקרא</span>}
+      </span>
+      <time className={styles.time} dateTime={item.publishedAt}>
+        {itemTime(item)}
+        <span>{item.relativeTime || ''}</span>
+      </time>
     </button>
   );
 }
 
-export function AllNewsPage({
+function AllNewsWithFeed(props) {
+  return <AllNewsView {...props} feed={useNewsFeed()} />;
+}
+
+/**
+ * The all-mivzakim screen.
+ * - `items` given: shows them as they are (no requests).
+ * - Otherwise: reads the shared feed from NewsFeedProvider; without a provider above it,
+ *   it loads the feed itself (`refreshMs` applies only then).
+ */
+export function AllNewsPage({ refreshMs, ...props }) {
+  if (props.items !== undefined) return <AllNewsView {...props} feed={null} />;
+  return (
+    <EnsureNewsFeed refreshMs={refreshMs}>
+      <AllNewsWithFeed {...props} />
+    </EnsureNewsFeed>
+  );
+}
+
+function AllNewsView({
   items: suppliedItems,
-  refreshMs = 30000,
+  feed,
   totalCount,
-  urgentCount,
-  onBack,
   className = '',
 }) {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [query, setQuery] = useState('');
   const [selectedSource, setSelectedSource] = useState('כל המקורות');
-  const [urgentOnly, setUrgentOnly] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState(null);
+  const [visibleItemCount, setVisibleItemCount] = useState(6);
   const [displayedItems, setDisplayedItems] = useState([]);
   const [pendingItems, setPendingItems] = useState([]);
   const initialized = useRef(false);
   const displayedRef = useRef([]);
   const pendingRef = useRef([]);
   const listRef = useRef(null);
-  const feed = useNewsFeed(refreshMs, autoRefresh && suppliedItems === undefined);
-  const incomingItems = suppliedItems === undefined ? feed.items : suppliedItems;
-  const loading = suppliedItems === undefined && feed.loading;
+  const { isRead, markAsRead } = useReadStatus();
+  const usesFeed = Boolean(feed);
+  // While the server is failing, live updating is paused (Figma: "עדכון חי מושהה"); it resumes once a request succeeds.
+  const [feedHasError, setFeedHasError] = useState(false);
+  const liveActive = autoRefresh && !feedHasError;
+  const feedFailed = usesFeed && Boolean(feed.error);
+  useEffect(() => setFeedHasError(feedFailed), [feedFailed]);
+  const incomingItems = usesFeed ? feed.items : suppliedItems;
+  const loading = usesFeed && feed.loading;
+
+  // The feed is shared (the ticker keeps updating), so pausing this screen means not taking
+  // in updates. When the user resumes, the channels are asked again right away, as before.
+  const wasAutoRefresh = useRef(autoRefresh);
+  useEffect(() => {
+    if (autoRefresh && !wasAutoRefresh.current && usesFeed) feed.reload();
+    wasAutoRefresh.current = autoRefresh;
+  }, [autoRefresh]);
 
   useEffect(() => {
     if (loading) return;
+    // Paused: keep showing what is on screen (the first load still goes through).
+    if (initialized.current && usesFeed && !liveActive) return;
     const incoming = sortNewestFirst(incomingItems || []);
+    // A failed first load must not initialise the list as empty (later items would all count as "new").
+    if (!initialized.current && feedFailed && incoming.length === 0) return;
 
     if (!initialized.current) {
       const currentItems = incoming.filter((item) => !item.isNew);
@@ -103,6 +151,8 @@ export function AllNewsPage({
       pendingRef.current = initialPending;
       setDisplayedItems(initialItems);
       setPendingItems(initialPending);
+      // Entering the screen: everything already in the list counts as read.
+      markAsRead(initialItems.map((item) => item.id));
       initialized.current = true;
       return;
     }
@@ -118,22 +168,25 @@ export function AllNewsPage({
     pendingRef.current = nextPending;
     setDisplayedItems(updatedDisplayed);
     setPendingItems(nextPending);
-  }, [incomingItems, loading]);
+  }, [incomingItems, loading, feedFailed, liveActive]);
+
+  useEffect(() => {
+    setVisibleItemCount(6);
+  }, [query, selectedSource]);
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase('he');
     return displayedItems.filter((item) => {
       const matchesSource = selectedSource === 'כל המקורות' || item.source === selectedSource;
-      const matchesUrgency = !urgentOnly || isUrgent(item);
       const searchable = `${item.title} ${item.source} ${item.details || ''}`.toLocaleLowerCase('he');
-      return matchesSource && matchesUrgency && searchable.includes(normalizedQuery);
+      return matchesSource && searchable.includes(normalizedQuery);
     });
-  }, [displayedItems, query, selectedSource, urgentOnly]);
+  }, [displayedItems, query, selectedSource]);
 
   const groupedItems = useMemo(() => {
     const groups = [];
-    filteredItems.forEach((item) => {
-      const label = item.dayLabel || 'היום · יום שני 2.11';
+    filteredItems.slice(0, visibleItemCount).forEach((item) => {
+      const label = item.dayLabel;
       let group = groups[groups.length - 1];
       if (!group || group.label !== label) {
         group = { label, items: [] };
@@ -142,7 +195,7 @@ export function AllNewsPage({
       group.items.push(item);
     });
     return groups;
-  }, [filteredItems]);
+  }, [filteredItems, visibleItemCount]);
 
   const todayItems = useMemo(() => {
     const uniqueItems = new Map(
@@ -160,10 +213,22 @@ export function AllNewsPage({
     if (listRef.current) listRef.current.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const filtered = query.trim() !== '' || selectedSource !== 'כל המקורות' || urgentOnly;
-  const countText = filtered
-    ? `${filteredItems.length} מבזקים`
-    : `${totalCount ?? todayItems.length} מבזקים היום · ${urgentCount ?? todayItems.filter(isUrgent).length} דחופים`;
+  const trimmedQuery = query.trim();
+  const isSourceFiltered = selectedSource !== 'כל המקורות';
+  const showError = feedFailed && displayedItems.length === 0 && !loading;
+  let countText = `${totalCount ?? todayItems.length} מבזקים היום`;
+  if (showError) countText = 'המבזקים לא זמינים כרגע';
+  else if (trimmedQuery !== '') countText = `${filteredItems.length} תוצאות ל"${trimmedQuery}"`;
+  else if (isSourceFiltered) countText = `${filteredItems.length} מבזקים ${sourcePrepositions[selectedSource]} היום`;
+  const isEmpty = !loading && !showError && groupedItems.length === 0;
+  const nextItem = filteredItems[visibleItemCount];
+  const nextGroupLabel = nextItem?.dayLabel;
+  const lastVisibleGroup = groupedItems[groupedItems.length - 1];
+
+  const clearFilters = () => {
+    setQuery('');
+    setSelectedSource('כל המקורות');
+  };
 
   return (
     <main className={`${styles.page} ${className}`} dir="rtl">
@@ -178,54 +243,46 @@ export function AllNewsPage({
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="חיפוש במבזקים"
               />
-              <img src={searchIcon} width="24" height="24" alt="" />
+              <AllNewsSearchIcon width="24" height="24" aria-hidden="true" />
             </label>
             <button
               type="button"
               className={styles.liveStatus}
-              onClick={() => setAutoRefresh((current) => !current)}
+              onClick={() => {
+                // Paused because of a server error: resuming means trying the server again.
+                if (feedHasError && autoRefresh) feed?.reload();
+                else setAutoRefresh((current) => !current);
+              }}
               aria-pressed={autoRefresh}
               aria-label={autoRefresh ? 'השהיית עדכון חי' : 'הפעלת עדכון חי'}
             >
-              <img src={autoRefresh ? toggleIcon : playIcon} width="28" height="28" alt="" />
-              <span>{autoRefresh ? 'עדכון חי · עודכן לפני 30 שנ׳' : 'עדכון מושהה'}</span>
-              <img className={autoRefresh ? '' : styles.dimmed} src={liveIcon} width="8" height="8" alt="" />
+              {autoRefresh
+                ? <AllNewsToggleIcon width="28" height="28" aria-hidden="true" />
+                : <AllNewsPlayIcon width="28" height="28" aria-hidden="true" />}
+              <span>{liveActive ? 'עדכון חי · עודכן לפני 30 שנ׳' : 'עדכון חי מושהה'}</span>
+              <AllNewsLiveIcon className={autoRefresh ? '' : styles.dimmed} width="8" height="8" aria-hidden="true" />
             </button>
           </div>
+          {/* Figma "Page title": the title only. */}
           <div className={styles.titleGroup}>
-            <button
-              type="button"
-              className={styles.backButton}
-              onClick={onBack || (() => window.history.back())}
-              aria-label="חזרה"
-            >
-              <img src={backIcon} width="16" height="16" alt="" />
-            </button>
             <h1>מבזקים</h1>
           </div>
         </header>
 
         <section className={styles.filters} aria-label="סינון מבזקים">
           <p className={styles.count}>{countText}</p>
-          <div className={styles.filterControls} role="group" aria-label="מקורות וחשיבות">
-            <button
-              type="button"
-              className={`${styles.chip} ${urgentOnly ? styles.chipSelected : ''}`}
-              onClick={() => setUrgentOnly((current) => !current)}
-              aria-pressed={urgentOnly}
-            >
-              דחופים בלבד
-            </button>
+          <div className={styles.filterControls} role="group" aria-label="סינון לפי מקור">
             <span className={styles.filterDivider} aria-hidden="true" />
-            {sourceFilters.map((source) => (
+            {sourceFilters.map((name) => (
               <button
                 type="button"
-                key={source}
-                className={`${styles.chip} ${selectedSource === source ? styles.chipSelected : ''}`}
-                onClick={() => setSelectedSource((current) => (current === source ? 'כל המקורות' : source))}
-                aria-pressed={selectedSource === source}
+                key={name}
+                className={`${styles.chip} ${selectedSource === name ? styles.chipSelected : ''}`}
+                onClick={() => setSelectedSource((current) => (current === name ? 'כל המקורות' : name))}
+                aria-pressed={selectedSource === name}
               >
-                {source}
+                <ChannelIcon name={name} className={styles.sourceLogo} />
+                <span>{name}</span>
               </button>
             ))}
             <button
@@ -234,55 +291,110 @@ export function AllNewsPage({
               onClick={() => setSelectedSource('כל המקורות')}
               aria-pressed={selectedSource === 'כל המקורות'}
             >
-              כל המקורות
+              <AllNewsAllSourcesIcon width="16" height="16" aria-hidden="true" />
+              <span>כל המקורות</span>
             </button>
           </div>
         </section>
 
-        <section className={styles.newsCard} aria-label="כל המבזקים">
-          <div className={styles.cardHeader}>
-            <div className={styles.cardTitle}>
-              <span className={styles.sectionIcon}>
-                <img src={sectionIcon} width="28" height="28" alt="" />
-              </span>
-              <h2>כל המבזקים</h2>
+        <section
+          className={`${styles.newsCard} ${isEmpty ? styles.newsCardPanel : ''}`}
+          aria-label="כל המבזקים"
+        >
+          {showError ? (
+            <div className={styles.pageState} role="alert">
+              <AllNewsOfflineIcon width="220" height="220" aria-hidden="true" />
+              <h2>לא הצלחנו לטעון את המבזקים</h2>
+              <p>התקלה אצלנו, לא אצלך. נסו שוב בעוד רגע.</p>
+              <button type="button" onClick={() => feed?.reload()}>נסו שוב</button>
             </div>
-          </div>
-
-          {pendingItems.length > 0 && (
-            <button type="button" className={styles.newUpdates} onClick={acceptUpdates}>
-              <span>{pendingItems.length} מבזקים חדשים</span>
-              <img src={arrowUpIcon} width="10" height="12" alt="" />
-            </button>
-          )}
-
-          <div className={styles.flashList} ref={listRef} aria-live="polite">
-            {loading ? (
-              <p className={styles.message}>טוען מבזקים…</p>
-            ) : feed.error && suppliedItems === undefined && displayedItems.length === 0 ? (
-              <p className={styles.message}>לא ניתן לטעון מבזקים כרגע</p>
-            ) : groupedItems.length === 0 ? (
-              <p className={styles.message}>לא נמצאו מבזקים</p>
-            ) : (
-              groupedItems.map((group) => (
-                <div className={styles.dayGroup} key={group.label}>
-                  <div className={styles.daySeparator}>
-                    <p>{group.label}</p>
-                    <span />
-                  </div>
-                  {group.items.map((item) => (
-                    <NewsItem
-                      key={item.id}
-                      item={item}
-                      selected={selectedItemId === item.id}
-                      onSelect={() => setSelectedItemId((current) => (current === item.id ? null : item.id))}
-                    />
-                  ))}
+          ) : (
+            <>
+              {pendingItems.length > 0 && !isEmpty && (
+                <div className={styles.newUpdatesRow}>
+                  <button type="button" className={styles.newUpdates} onClick={acceptUpdates}>
+                    <AllNewsArrowUpIcon width="10" height="12" aria-hidden="true" />
+                    <span>{pendingItems.length} מבזקים חדשים</span>
+                  </button>
                 </div>
-              ))
-            )}
-          </div>
-          <div className={styles.listFade} aria-hidden="true" />
+              )}
+
+              <div className={styles.flashList} ref={listRef} aria-live="polite">
+                {loading ? (
+                  <p className={styles.message}>טוען מבזקים…</p>
+                ) : isEmpty ? (
+                  trimmedQuery !== '' ? (
+                    <div className={styles.emptyState} role="status">
+                      <AllNewsEmptyStateIcon width="160" height="160" aria-hidden="true" />
+                      <h2>לא נמצאו מבזקים</h2>
+                      <p>נסו מילה אחרת, או בחרו 'כל המקורות'.</p>
+                      <button type="button" onClick={clearFilters}>ניקוי חיפוש</button>
+                    </div>
+                  ) : (
+                    <div className={styles.emptyState} role="status">
+                      <span className={styles.noFlashesArt} aria-hidden="true">
+                        <AllNewsNoFlashesIcon width="128" height="128" />
+                      </span>
+                      <h2>
+                        {isSourceFiltered
+                          ? `אין היום מבזקים ${sourcePrepositions[selectedSource]}`
+                          : 'אין היום מבזקים'}
+                      </h2>
+                      <p>{isSourceFiltered ? 'מבזקים חדשים מהערוץ יופיעו כאן.' : 'מבזקים חדשים יופיעו כאן.'}</p>
+                      {isSourceFiltered && (
+                        <button type="button" onClick={() => setSelectedSource('כל המקורות')}>
+                          חזרה לכל המקורות
+                        </button>
+                      )}
+                    </div>
+                  )
+                ) : (
+                  <>
+                    {groupedItems.map((group) => (
+                      <div className={styles.dayGroup} key={group.label}>
+                        <div className={styles.daySeparator}>
+                          <p>{group.label}</p>
+                          <span />
+                        </div>
+                        {group.items.map((item) => (
+                          <NewsItem
+                            key={item.id}
+                            item={item}
+                            selected={selectedItemId === item.id}
+                            isUnread={!isRead(item)}
+                            showSource={!isSourceFiltered}
+                            onSelect={() => {
+                              markAsRead(item.id);
+                              setSelectedItemId((current) => (current === item.id ? null : item.id));
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                    {visibleItemCount < filteredItems.length && (
+                      <>
+                        {lastVisibleGroup && lastVisibleGroup.label !== nextGroupLabel && (
+                          <div className={styles.daySeparator}>
+                            <p>{nextGroupLabel}</p>
+                            <span />
+                          </div>
+                        )}
+                        <div className={styles.loadMoreRow}>
+                          <button
+                            type="button"
+                            className={styles.loadMore}
+                            onClick={() => setVisibleItemCount((count) => count + 6)}
+                          >
+                            טעינת מבזקים נוספים
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </section>
       </div>
     </main>

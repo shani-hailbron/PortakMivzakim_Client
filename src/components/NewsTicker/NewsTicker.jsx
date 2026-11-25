@@ -1,17 +1,13 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import liveDotIcon from '../../assets/live-dot.svg';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { LiveDotIcon, TickerPlayIcon } from '../../assets';
 import { NewsTickerItem } from '../NewsTickerItem/NewsTickerItem';
 import styles from './NewsTicker.module.css';
-
-function prefersReducedMotion() {
-  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-}
 
 /**
  * Breaking-news ticker ("פס מבזקים") – implemented from Figma node 976:993.
  * - Fade on the left edge instead of cutting words.
  * - 32×32 pause/play button (WCAG 2.2.2).
- * - prefers-reduced-motion → starts paused.
+ * - Always starts moving (prefers-reduced-motion is ignored – see the note on `paused`).
  * - Paused → live dot is dimmed.
  *
  * @param {object}  props
@@ -30,20 +26,14 @@ export function NewsTicker({
   allNewsUrl = '/ticker',
   onOpenAllNews,
 }) {
-  const [paused, setPaused] = useState(prefersReducedMotion);
+  // Always starts moving. Not tied to prefers-reduced-motion: on the internal network
+  // (GPO / Citrix / RDP) Windows reports it for every user, which kept the ticker stopped.
+  // Users can still stop it with the pause button (WCAG 2.2.2).
+  const [paused, setPaused] = useState(false);
   const [repeat, setRepeat] = useState(1);
   const [duration, setDuration] = useState(40);
   const viewportRef = useRef(null);
   const copyRef = useRef(null);
-
-  // Follow changes in the OS reduced-motion setting.
-  useEffect(() => {
-    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    if (!mq) return undefined;
-    const onChange = (e) => e.matches && setPaused(true);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
 
   // Make one copy at least as wide as the viewport (seamless loop) and keep a constant speed.
   useLayoutEffect(() => {
@@ -117,10 +107,10 @@ export function NewsTicker({
   return (
     <section className={rootClass} aria-label={label} dir="rtl" onClick={handleTickerClick}>
       <div className={styles.tag}>
+        <LiveDotIcon className={styles.liveDot} width={6} height={6} aria-hidden="true" />
         <a className={styles.tagLink} href={allNewsUrl} onClick={handleLabelClick}>
           {label}
         </a>
-        <img className={styles.liveDot} src={liveDotIcon} width={6} height={6} alt="" />
       </div>
 
       <button
@@ -130,12 +120,7 @@ export function NewsTicker({
         aria-label={paused ? 'הפעלת המבזקים' : 'עצירת המבזקים'}
       >
         {paused ? (
-          <svg className={styles.playIcon} width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-            <path
-              d="M3 1.2v9.6a.6.6 0 0 0 .92.5l7.2-4.8a.6.6 0 0 0 0-1L3.92.7A.6.6 0 0 0 3 1.2Z"
-              fill="var(--nt-brand)"
-            />
-          </svg>
+          <TickerPlayIcon className={styles.playIcon} width={12} height={12} aria-hidden="true" />
         ) : (
           <span className={styles.icon} aria-hidden="true">
             <span className={styles.bar} />
