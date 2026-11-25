@@ -10,7 +10,6 @@
   --nt-brand: var(--background-brand-default, #0068f5);
   --nt-brand-subtle: var(--background-brand-subtle, #ebf3ff);
   --nt-tag-bg: var(--brand-brand-tint-75, #e0edfb);
-  --nt-tag-text: var(--primary-dark, #00033d);
   --nt-space-200: var(--space-200, 4px);
   --nt-space-300: var(--space-300, 8px);
   --nt-space-500: var(--space-500, 16px);
@@ -54,15 +53,6 @@
   padding: var(--nt-space-200) var(--nt-space-300);
   background: var(--nt-tag-bg);
   border-radius: var(--nt-radius-m);
-}
-
-.tagLabel {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1;
-  color: var(--nt-tag-text);
-  white-space: nowrap;
 }
 
 .tagLink {
@@ -257,16 +247,4 @@
   font-size: 12px;
   line-height: 1.25;
   color: var(--nt-text-secondary);
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }

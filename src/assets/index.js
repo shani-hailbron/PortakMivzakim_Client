@@ -1,11 +1,7 @@
 // Every icon is an SVG imported as a React component (@svgr/webpack, see webpack.config.js):
 //   import { LiveDotIcon } from '../../assets';
 //   <LiveDotIcon className={styles.liveDot} width={6} height={6} aria-hidden="true" />
-import SourceNews12Logo from './source-news12.svg';
-import SourceYnetLogo from './source-ynet.svg';
-// PNG logos from Figma (Source logo · Logo image): imported as a URL string.
-import SourceIsraelHayomLogo from './source-israelhayom.png';
-import SourceHaaretzLogo from './source-haaretz.png';
+// Channel logos (source-*.svg / source-*.png) are used by components/ChannelIcon.
 
 export { default as LiveDotIcon } from './live-dot.svg';
 export { default as SeparatorIcon } from './separator.svg';
@@ -22,18 +18,3 @@ export { default as AllNewsOfflineIcon } from './all-news-offline.svg';
 export { default as AllNewsToggleIcon } from './all-news-toggle.svg';
 export { default as AllNewsPlayIcon } from './all-news-play.svg';
 export { default as AllNewsLiveIcon } from './all-news-live.svg';
-export { default as AllNewsSectionIcon } from './all-news-section.svg';
-export { default as AllNewsUrgentDotIcon } from './all-news-urgent-dot.svg';
-
-export { SourceNews12Logo, SourceYnetLogo };
-
-// Channel logos by channel name (the name as it appears in a mivzak's "source").
-// To add a logo: add the channel's SVG or PNG file to this folder, import it above and add it here.
-// (SVG = React component, PNG = URL string; ChannelIcon handles both.)
-// ערוץ 14 and וויינט ספורט have no logo in the design yet – they show initials.
-export const ChannelLogos = {
-  'חדשות 12': SourceNews12Logo,
-  'וויינט': SourceYnetLogo,
-  'ישראל היום': SourceIsraelHayomLogo,
-  'הארץ': SourceHaaretzLogo,
-};
